@@ -1,0 +1,169 @@
+version: '3.9'
+
+services:
+  # setup MongoDB cluster for production
+  mongo-replica-setup:
+    container_name: mongo-setup
+    image: 'mongo:7.0.2'
+    restart: on-failure
+    networks:
+      - netApplication
+    volumes:
+      - ./.docker/mongodb/scripts/mongosetup.sh:/scripts/mongosetup.sh
+    entrypoint: ['bash', '/scripts/mongosetup.sh']
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    depends_on:
+      - mongo1
+      - mongo2
+      - mongo3
+
+  mongo1:
+    hostname: 'mongo1'
+    container_name: 'mongo1'
+    image: 'mongo:7.0.2'
+    restart: 'on-failure'
+    command:
+      [
+        '-f',
+        '/etc/mongod.conf',
+        '--keyFile',
+        '/auth/file.key',
+        '--replSet',
+        '${MONGO_REPLICA_SET_NAME}',
+        '--bind_ip_all'
+      ]
+    expose:
+      - 27017
+    ports:
+      - 30001:27017
+    networks:
+      - netApplication
+    volumes:
+      - dataMongo1:/data/db
+      - logMongo1:/var/log/mongodb
+      - ./.docker/mongodb/initdb.d/:/docker-entrypoint-initdb.d/
+      - ./.docker/mongodb/mongod.conf:/etc/mongod.conf
+      - ./.docker/mongodb/file.key:/auth/file.key
+    healthcheck:
+      test: test $$(echo "rs.status().ok" | mongo -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --quiet) -eq 1
+      interval: 30s
+      start_period: 60s
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+
+  mongo2:
+    hostname: 'mongo2'
+    container_name: 'mongo2'
+    image: 'mongo:7.0.2'
+    command:
+      [
+        '-f',
+        '/etc/mongod.conf',
+        '--keyFile',
+        '/auth/file.key',
+        '--replSet',
+        '${MONGO_REPLICA_SET_NAME}',
+        '--bind_ip_all'
+      ]
+    restart: 'on-failure'
+    expose:
+      - 27017
+    ports:
+      - 30002:27017
+    networks:
+      - netApplication
+    volumes:
+      - dataMongo2:/data/db
+      - logMongo2:/var/log/mongodb
+      - ./.docker/mongodb/mongod.conf:/etc/mongod.conf
+      - ./.docker/mongodb/file.key:/auth/file.key
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    depends_on:
+      - mongo1
+
+  mongo3:
+    hostname: 'mongo3'
+    container_name: 'mongo3'
+    image: 'mongo:7.0.2'
+    command:
+      [
+        '-f',
+        '/etc/mongod.conf',
+        '--keyFile',
+        '/auth/file.key',
+        '--replSet',
+        '${MONGO_REPLICA_SET_NAME}',
+        '--bind_ip_all'
+      ]
+    restart: 'on-failure'
+    expose:
+      - 27017
+    ports:
+      - 30003:27017
+    networks:
+      - netApplication
+    volumes:
+      - dataMongo3:/data/db
+      - logMongo3:/var/log/mongodb
+      - ./.docker/mongodb/mongod.conf:/etc/mongod.conf
+      - ./.docker/mongodb/file.key:/auth/file.key
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    depends_on:
+      - mongo1
+
+  # redis:
+  #   container_name: tabsai-simple-redis
+  #   image: redis:6.2.6
+  #   restart: always
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "${REDIS_PORT}:${REDIS_PORT}"
+  #   command: redis-server --port ${REDIS_PORT} --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+  #   volumes:
+  #     - redis:/data
+
+  # tabsai-simple:
+  #   depends_on:
+  #     - db
+  #   container_name: tabsai-simple-server
+  #   build: .
+  #   env_file:
+  #     - .env.dev
+  #   ports:
+  #     - '${PORT}:${PORT}'
+  #   volumes:
+  #     - .:/app
+  #     # - tabsai-simple-public:/app/public
+  #     - /app/node_modules
+
+volumes:
+  # tabsai-simple-db:
+  dataMongo1:
+  dataMongo2:
+  dataMongo3:
+  logMongo1:
+  logMongo2:
+  logMongo3:
+  tabsai-simple-public:
+
+networks:
+  netApplication:

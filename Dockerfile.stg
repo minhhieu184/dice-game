@@ -1,0 +1,31 @@
+# BASE DEPENDENCIES STAGE
+FROM node:19-alpine3.16 as base_dependencies
+WORKDIR /app
+
+COPY package.json ./
+COPY yarn.lock ./
+RUN yarn install --prod
+# RUN npm rebuild bcrypt --build-from-source
+
+
+# BUILD STAGE
+FROM node:19-alpine3.16 as builder
+WORKDIR /app
+
+COPY --from=base_dependencies /app/node_modules ./node_modules
+COPY --from=base_dependencies /app/package.json ./package.json
+RUN yarn add @nestjs/cli @types/node
+COPY . .
+RUN yarn build
+
+
+# PRODUCTION STAGE
+FROM node:19-alpine3.16
+WORKDIR /app
+
+COPY --from=base_dependencies /app/node_modules ./node_modules
+COPY --from=base_dependencies /app/package.json ./package.json
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/.env.stg ./.env.stg
+
+CMD ["yarn", "start:stg"]

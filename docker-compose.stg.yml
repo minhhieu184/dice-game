@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  redis:
+    container_name: tabsai-simple-redis-stg
+    image: redis:7.2.2
+    restart: always
+    ports:
+      - '${REDIS_FORWARD_PORT}:${REDIS_PORT}'
+    command: redis-server --port ${REDIS_PORT} --save 15 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - tabsai-simple-redis:/data
+    networks:
+      - tabsai-simple
+
+  tabsai-simple-stg:
+    depends_on:
+      - redis
+    container_name: tabsai-simple-server-stg
+    build:
+      dockerfile: Dockerfile.stg
+    ports:
+      - '${FORWARD_PORT}:${PORT}'
+    networks:
+      - tabsai-simple
+
+volumes:
+  tabsai-simple-redis:
+
+networks:
+  tabsai-simple:
+    external: true
+    name: tabsai-simple-network

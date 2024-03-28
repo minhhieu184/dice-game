@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: tabsai-simple-db
+    image: mongo:7.0.2
+    ports:
+      - '${DB_FORWARD_PORT}:${DATABASE_PORT}'
+    env_file:
+      - .env.dev
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DATABASE_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${DATABASE_PASSWORD}
+      - MONGO_INITDB_DATABASE=${DATABASE_INIT}
+    volumes:
+      - tabsai-simple-db:/data/db
+
+  redis:
+    container_name: tabsai-simple-redis
+    image: redis:7.2.2
+    restart: always
+    ports:
+      - '${REDIS_FORWARD_PORT}:${REDIS_PORT}'
+    command: redis-server --port ${REDIS_PORT} --save 15 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - tabsai-simple-redis:/data
+
+  tabsai-simple:
+    depends_on:
+      - db
+    container_name: tabsai-simple-server
+    build: .
+    env_file:
+      - .env.dev
+    ports:
+      - '${FORWARD_PORT}:${PORT}'
+    volumes:
+      - .:/app
+      # - tabsai-simple-public:/app/public
+      - /app/node_modules
+
+volumes:
+  tabsai-simple-db:
+  tabsai-simple-redis:
+  tabsai-simple-public:

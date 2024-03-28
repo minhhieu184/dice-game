@@ -1,0 +1,5 @@
+export * from './bet.gateway.service'
+export * from './decide.gateway.service'
+export * from './game.gateway.service'
+export * from './result-waiting.service'
+export * from './result.gateway.service'
